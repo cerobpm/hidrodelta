@@ -1,0 +1,191 @@
+{
+	"151": {
+		"estacion_id": 151,
+		"nombre": "Atucha",
+		"series_id": 3403,
+		"var_id": 2,
+		"cero_ign": -0.556
+	},
+	"1702": {
+		"estacion_id": 1702,
+		"nombre": "Braga",
+		"series_id": 3407,
+		"var_id": 2,
+		"cero_ign": -0.337
+	},
+	"1710": {
+		"estacion_id": 1710,
+		"nombre": "Desembocadura",
+		"series_id": 3395,
+		"var_id": 2,
+		"cero_ign": 0.327
+	},
+	"1711": {
+		"estacion_id": 1711,
+		"nombre": "Las Rosas",
+		"series_id": 3406,
+		"var_id": 2,
+		"cero_ign": 0.03
+	},
+	"1712": {
+		"estacion_id": 1712,
+		"nombre": "Carabelitas",
+		"series_id": 3396,
+		"var_id": 2,
+		"cero_ign": 0.209
+	},
+	"1713": {
+		"estacion_id": 1713,
+		"nombre": "Zárate",
+		"series_id": 3404,
+		"var_id": 2,
+		"cero_ign": 0.388
+	},
+	"1714": {
+		"estacion_id": 1714,
+		"nombre": "Baradero",
+		"series_id": 3402,
+		"var_id": 2,
+		"cero_ign": 1.156
+	},
+	"1715": {
+		"estacion_id": 1715,
+		"nombre": "Brazo Largo",
+		"series_id": 3394,
+		"var_id": 2,
+		"cero_ign": 0.717
+	},
+	"1717": {
+		"estacion_id": 1717,
+		"nombre": "Bifurcación",
+		"series_id": 3417,
+		"var_id": 2,
+		"cero_ign": 1.37
+	},
+	"1770": {
+		"estacion_id": 1770,
+		"nombre": "Timbúes",
+		"series_id": 3389,
+		"var_id": 2,
+		"cero_ign": null
+	},
+	"29": {
+		"estacion_id": 29,
+		"nombre": "Paraná",
+		"series_id": 3408,
+		"var_id": 2,
+		"cero_ign": 9.432
+	},
+	"31": {
+		"estacion_id": 31,
+		"nombre": "Diamante",
+		"series_id": 3409,
+		"var_id": 2,
+		"cero_ign": 6.747
+	},
+	"32": {
+		"estacion_id": 32,
+		"nombre": "Victoria",
+		"series_id": 3419,
+		"var_id": 2,
+		"cero_ign": 1.536
+	},
+	"33": {
+		"estacion_id": 33,
+		"nombre": "San Lorenzo (San Martín)",
+		"series_id": 3411,
+		"var_id": 2,
+		"cero_ign": 3.309
+	},
+	"34": {
+		"estacion_id": 34,
+		"nombre": "Rosario",
+		"series_id": 3412,
+		"var_id": 2,
+		"cero_ign": 2.923
+	},
+	"35": {
+		"estacion_id": 35,
+		"nombre": "Villa Constitución",
+		"series_id": 3413,
+		"var_id": 2,
+		"cero_ign": 1.981
+	},
+	"36": {
+		"estacion_id": 36,
+		"nombre": "San Nicolás",
+		"series_id": 3414,
+		"var_id": 2,
+		"cero_ign": 3.91
+	},
+	"37": {
+		"estacion_id": 37,
+		"nombre": "Ramallo",
+		"series_id": 3415,
+		"var_id": 2,
+		"cero_ign": 1.642
+	},
+	"38": {
+		"estacion_id": 38,
+		"nombre": "San Pedro",
+		"series_id": 3416,
+		"var_id": 2,
+		"cero_ign": 0.714
+	},
+	"39": {
+		"estacion_id": 39,
+		"nombre": "Baradero",
+		"series_id": 3418,
+		"var_id": 2,
+		"cero_ign": 0.641
+	},
+	"41": {
+		"estacion_id": 41,
+		"nombre": "Campana",
+		"series_id": 3405,
+		"var_id": 2,
+		"cero_ign": 0.418
+	},
+	"42": {
+		"estacion_id": 42,
+		"nombre": "Escobar",
+		"series_id": 3398,
+		"var_id": 2,
+		"cero_ign": null
+	},
+	"44": {
+		"estacion_id": 44,
+		"nombre": "Canal Nuevo",
+		"series_id": 3397,
+		"var_id": 2,
+		"cero_ign": 0.39
+	},
+	"45": {
+		"estacion_id": 45,
+		"nombre": "Ibicuy",
+		"series_id": 3420,
+		"var_id": 2,
+		"cero_ign": 0.456
+	},
+	"49": {
+		"estacion_id": 49,
+		"nombre": "Tigre",
+		"series_id": 3400,
+		"var_id": 2,
+		"cero_ign": -0.099
+	},
+	"50": {
+		"estacion_id": 50,
+		"nombre": "Dique Luján",
+		"series_id": 3399,
+		"var_id": 2,
+		"cero_ign": -0.074
+	},
+	"51": {
+		"estacion_id": 51,
+		"nombre": "Chaná Miní",
+		"series_id": 3401,
+		"var_id": 2,
+		"cero_ign": -0.286
+	}
+}

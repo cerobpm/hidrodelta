@@ -1,0 +1,15 @@
+id,River,Reach,RS,BoundCond,Fuente,Tabla,id_bbdd,intervalo,ceroIGN,Tabla_pron,id_pron,ceroIGN2
+1,Bravo,Desembocadura,0,"Stage Hydrograph",Interpolado,Bravo,np.nan,1HOUR,0,np.nan,np.nan,0
+2,Mini,Desembocadura,0,"Stage Hydrograph",Interpolado,Mini,np.nan,1HOUR,0,np.nan,np.nan,0
+3,BarcaGrande,Desembocadura,0,"Stage Hydrograph",Interpolado,BarcaGrande,np.nan,1HOUR,0,np.nan,np.nan,0
+4,Sauce,Desembocadura,0,"Stage Hydrograph",Interpolado,Sauce,np.nan,1HOUR,0,np.nan,np.nan,0
+5,Parana,ParanaAA,224000,"Stage Hydrograph",BBDDAlerta,alturas_all,29,1HOUR,"9,432",alturas_sim,1130,"8,952"
+6,LaBarquita,Desembocadura,0,"Stage Hydrograph",Interpolado,LaBarquita,np.nan,1HOUR,0,np.nan,np.nan,0
+7,CanaldelEste,Desembocadura,0,"Stage Hydrograph",Interpolado,CanaldelEste,np.nan,1HOUR,0,np.nan,np.nan,0
+8,Lujan,Desembocadura,0,"Stage Hydrograph",Interpolado,Lujan,np.nan,1HOUR,0,np.nan,np.nan,0
+9,SanAntonio,Desembocadura,0,"Stage Hydrograph",Interpolado,SanAntonio,np.nan,1HOUR,0,np.nan,np.nan,0
+10,Lujan,1,"30,664","Flow Hydrograph",BBDDAlerta,caudales_sim,933,1DAY,0,caudales_sim,1375,0
+11,Palmas,Desembocadura,"6246,783","Stage Hydrograph",Interpolado,Palmas,np.nan,1HOUR,0,np.nan,np.nan,0
+12,Gutierrez,Desembocadura,"1960,748","Stage Hydrograph",Interpolado,Gutierrez,np.nan,1HOUR,0,np.nan,np.nan,0
+13,"Guazu           ",Desembocadura,8000,"Stage Hydrograph",Interpolado,Guazu,np.nan,1HOUR,0,np.nan,np.nan,0
+14,"Ibicuy          ",Ibicuy,"67.930* ","Lateral Inflow Hydrograph",BBDDAlerta,caudales_all,2,1DAY,0,caudales_sim,1102,0
