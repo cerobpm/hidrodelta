@@ -235,13 +235,10 @@ def plotFinal(df_obs,df_sim,nameout='productos/plot_final.png',ydisplay=1,xytext
     ax.xaxis.set_major_formatter(date_form)
     ax.xaxis.set_minor_locator(mdates.HourLocator((0,6,12,18,)))
 
-    #plt.tight_layout()
-    # plt.show()
-    # nameout = 'productos/Prono_Zarate.png'    
     plt.savefig(nameout, format='png')
     plt.close()
 
-def corrigeZarate(plots=False):
+def corrigeZarate(plots=False,upload=True):
     """# Carga los datos"""
 
     ## Carga Simulados en Zarate
@@ -395,7 +392,8 @@ def corrigeZarate(plots=False):
     series.append(prono2serie(df_Atucha_sim,main_colname="Y_predic",members={'e_pred_01':'p01','e_pred_99':'p99'},series_id=3403))
 
     # PLOT FINAL
-    plotFinal(df_Atucha_Obs,df_Atucha_sim,'productos/Prono_Atucha.png',3,(-420,-120),(-0.,3.5))
+    plotFinal(df_Atucha_Obs,df_Atucha_sim,'productos_res/Prono_Atucha.png',3,(-420,-120),(-0.,3.5))
+    plotFinal(None,df_Atucha_sim,'productos/Prono_Lima.png',3,(-420,-120),(-0.,3.5),fecha_emision=df_Atucha_Obs.index.max())
 
     """# Prediccion en CAMPANA ##############################
 
@@ -481,9 +479,10 @@ def corrigeZarate(plots=False):
     plotFinal(df_Escobar_Obs,df_Escobar_sim,'productos/Prono_Escobar.png',markersize=10,ydisplay=3.4,text_xoffset=(-2,-5),xytext=(-380,-250),ylim=(-1.,3.5),obsLine=False)
     
     ## UPLOAD PRONOSTICO
-    uploadPronoSeries(series,cal_id=440,forecast_date=ahora,outputfile="productos/prono.json",responseOutputFile="productos/pronoresponse.json")
+    if upload:
+        uploadPronoSeries(series,cal_id=440,forecast_date=ahora,outputfile="productos/prono.json",responseOutputFile="productos/pronoresponse.json")
 
-def corrigeRosario(plots=False):
+def corrigeRosario(plots=False,upload=True):
     ## Carga Simulados en Rosario
     df_Rosario_sim = getLastProno(288,{'estacion_id': '5893','var_id':2})
 
@@ -629,9 +628,10 @@ def corrigeRosario(plots=False):
     plotFinal(None,df_Timbues_sim,'productos/Prono_Timbues.png',ydisplay=3.4,text_xoffset=(0.5,0.5),ylim=None)
     
     ## UPLOAD PRONOSTICO
-    uploadPronoSeries(series,cal_id=441,forecast_date=df_Rosario_Obs.index.max(),outputfile="productos/prono.json",responseOutputFile="productos/pronoresponse.json")
+    if upload:
+        uploadPronoSeries(series,cal_id=441,forecast_date=df_Rosario_Obs.index.max(),outputfile="productos/prono.json",responseOutputFile="productos/pronoresponse.json")
 
-def corrigeVCons(plots=False):
+def corrigeVCons(plots=False,upload=True):
         ## Carga Simulados en VConstitucion
     df_VConstitucion_sim = getLastProno(288,{'estacion_id': '5905','var_id':2})
 
@@ -777,11 +777,12 @@ def corrigeVCons(plots=False):
     plotFinal(df_SanNicolas_Obs,df_SanNicolas_sim,'productos/Prono_SanNicolas.png',ydisplay=3.4,text_xoffset=(0.5,0.5),ylim=(-1.,2),bandaDeError=('e_pred_05','e_pred_95'),markersize=10,obsLine=False)
 
     ## UPLOAD PRONOSTICO
-    uploadPronoSeries(series,cal_id=442,forecast_date=df_VConstitucion_Obs.index.max(),outputfile="productos/prono.json",responseOutputFile="productos/pronoresponse.json")
+    if upload:
+        uploadPronoSeries(series,cal_id=442,forecast_date=df_VConstitucion_Obs.index.max(),outputfile="productos/prono.json",responseOutputFile="productos/pronoresponse.json")
 
 
 ### RUN ###
 
-corrigeZarate()
-corrigeRosario(plots=False)
-corrigeVCons(plots=False)
+corrigeZarate(plots=False,upload=False)
+#corrigeRosario(plots=False,upload=False)
+#corrigeVCons(plots=False,upload=False)
