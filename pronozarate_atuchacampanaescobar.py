@@ -143,535 +143,340 @@ def plotObsVsSim(df):
     plt.tight_layout()
     plt.show()
 
-###
+def plotObsVsSimVsPred(df,train):
+        fig = plt.figure(figsize=(17, 8))
+        ax = fig.add_subplot(1, 1, 1)
+        ax.plot(df.index, df['h_sim'], 'b-',label='Simulado')
+        ax.plot(df.index, df['h_obs'], 'r-',label='Observado')
+        ax.plot(train.index, train['Y_predictions'], 'k-',label='Ajuste RL')
+        plt.grid(True, which='both', color='0.75', linestyle='-.', linewidth=0.5)
+        plt.tick_params(axis='both', labelsize=18)
+        plt.xlabel('Fecha', size=18)
+        plt.ylabel('Nivel [m]', size=18)
+        plt.legend(prop={'size':20},loc=0)
+        plt.tight_layout()
+        plt.show()
 
-"""# Carga los datos"""
+def plotFinal(df_obs,df_sim,nameout='productos/plot_final.png',ydisplay=1,xytext=(-480,-250),ylim=(-1,2.5),markersize=None,text_xoffset=(-4,-8)):
 
-## Carga Simulados en Zarate
-df_Zarate_sim = getLastProno(288,{'estacion_id': '5907', 'var_id': 2})
-
-## Carga Observados
-
-f_inicio = df_Zarate_sim.index.min()
-f_fin = df_Zarate_sim.index.max()
-Estaciones = {5907:'Zarate',}
-# Estaciones a consultar
-idDest = 5907
-idSerieOrigen = 29437
-df_Zarate_Obs = getObs(idSerieOrigen,f_inicio,f_fin)
-
-# Elimina saltos
-df_Zarate_Obs = eliminaSaltos(df_Zarate_Obs,0.25)
-# sns.histplot(data=df_Zarate_Obs, x="dif_F")
-# plt.show()
-# df_Zarate_Obs.set_index(df_Zarate_Obs['fecha'].dt.tz_convert(None), inplace=True)
-# del df_Zarate_Obs['fecha']
-
-###### Correccion 1 el simulado en zarate de retrasa dos horas
-df_Zarate_sim.index = df_Zarate_sim.index + timedelta(hours=1) # - timedelta(hours=2)
-
-## Union
-df_Zarate = df_Zarate_sim.join(df_Zarate_Obs, how = 'outer')
-df_Zarate['h_sim'] = df_Zarate['h_sim'].interpolate(method='linear',limit=4)
-#df_Zarate['h_sim_Mavg'] = df_Zarate['h_sim'].rolling(4, min_periods=1).mean()
-
-##Plot
-if False:
-    plotObsVsSim(df_Zarate)
-
-"""# Modelo RL"""
-
-train0 = df_Zarate.copy()
-train0['Error0'] = train0['h_sim'] - train0['h_obs']
-train0['dif_F1'] = train0['h_sim'].diff(periods=1).abs()
-train0['dif_F2'] = train0['h_sim'].diff(periods=2).abs()
-train0['dif_F3'] = train0['h_sim'].diff(periods=3).abs()
-
-train0['dif_B1'] = train0['h_sim'].diff(periods=-1).abs()
-train0['dif_B2'] = train0['h_sim'].diff(periods=-2).abs()
-train0['dif_B3'] = train0['h_sim'].diff(periods=-3).abs()
-
-train0['dif_F'] = train0['dif_F1'].rolling(3, min_periods=1).mean()
-train0['dif_B'] = train0['dif_B1'].rolling(3, min_periods=1).mean()
-
-from sklearn import datasets, linear_model
-from sklearn.metrics import mean_squared_error, r2_score
-
-## Modelo
-train = train0[:].copy()
-train = train.dropna()
-
-var_obj = 'h_obs'
-#var_obj = 'Error0'
-covariav = ['h_sim','dif_F1','dif_B1','dif_F2','dif_B2','dif_F3','dif_B3']
-covariav = ['h_sim','dif_F1','dif_B1','dif_F2','dif_B2']
-covariav = ['h_sim','dif_F','dif_B']
-covariav = ['h_sim',]
-
-lr = linear_model.LinearRegression()
-X_train = train[covariav]
-Y_train = train[var_obj]
-lr.fit(X_train,Y_train)
-
-# Create the test features dataset (X_test) which will be used to make the predictions.
-X_test = train[covariav].values
-# The labels of the model
-Y_test = train[var_obj].values
-Y_predictions = lr.predict(X_test)
-train['Y_predictions'] = Y_predictions
-#train['Y_predictions'] = train['h_sim'] - train['Y_predictions'] 
-
-# The coefficients
-print('Coefficients B0: \n', lr.intercept_)
-print('Coefficients: \n', lr.coef_)
-
-# The mean squared error
-mse = mean_squared_error(Y_test, Y_predictions)
-print('Mean squared error: %.5f' % mse)
-# The coefficient of determination: 1 is perfect prediction
-coefDet = r2_score(Y_test, Y_predictions)
-print('r2_score: %.5f' % coefDet)
-
-train['Error_pred'] =  train['Y_predictions']  - train[var_obj]
-quant_Err = train['Error_pred'].quantile([.001,.05,.95,.999])
-
-## Plot
-if False:
-    fig = plt.figure(figsize=(17, 8))
+    fig = plt.figure(figsize=(12, 8))
     ax = fig.add_subplot(1, 1, 1)
-    ax.plot(df_Zarate.index, df_Zarate['h_sim'], 'b-',label='Simulado')
-    ax.plot(df_Zarate.index, df_Zarate['h_obs'], 'r-',label='Observado')
-    ax.plot(train.index, train['Y_predictions'], 'k-',label='Ajuste RL')
-    plt.grid(True, which='both', color='0.75', linestyle='-.', linewidth=0.5)
-    plt.tick_params(axis='both', labelsize=18)
-    plt.xlabel('Fecha', size=18)
-    plt.ylabel('Nivel [m]', size=18)
-    plt.legend(prop={'size':20},loc=0)
-    plt.tight_layout()
-    plt.show()
-
-"""# Predicción  en Zarate
-
-Predice sobre todos los datos de Zarate.  Se vuelve a calcular porque al entrenar el modelo hay datos que se eliminan por no tener un observado para comparar. Al predecir si se tiene estos datos en cuenta y se completa la serie.
-"""
-
-df_Zarate_sim2 = df_Zarate_sim.copy()
-X_input = df_Zarate_sim2[['h_sim',]].values
-
-# Prediccion
-df_Zarate_sim2['Y_predic'] = lr.predict(X_input)
-
-horas_plot = 24*15
-df_Zarate_sim2 = df_Zarate_sim2[-horas_plot:]
-# df_simulado['e_pred_05'] = df_simulado['Y_predic'] + quant_Err[0.05]
-# df_simulado['e_pred_95'] = df_simulado['Y_predic'] + quant_Err[0.95]
-df_Zarate_sim2['e_pred_01'] = df_Zarate_sim2['Y_predic'] + quant_Err[0.001]
-df_Zarate_sim2['e_pred_99'] = df_Zarate_sim2['Y_predic'] + quant_Err[0.999]
-
-
-# SERIES 2 upload #
-
-# output_json = prono2json(df_Zarate_sim2,main_colname="Y_predic",members={'e_pred_01':'p01','e_pred_99':'p99'},series_id=29534,forecast_date=df_Zarate_Obs.index.max())
-series = [
-    prono2serie(df_Zarate_sim2,main_colname="Y_predic",members={'e_pred_01':'p01','e_pred_99':'p99'},series_id=29534)
-]
-
-# PLOT FINAL
-fig = plt.figure(figsize=(12, 8))
-ax = fig.add_subplot(1, 1, 1)
-
-ax.plot(df_Zarate_sim2.index, df_Zarate_sim2['Y_predic'], '-',color='b',label='Nivel Pronosticado',linewidth=3)
-ax.plot(df_Zarate_Obs.index, df_Zarate_Obs['h_obs'],'o',color='k',label='Nivel Observado',linewidth=3)
-ax.plot(df_Zarate_Obs.index, df_Zarate_Obs['h_obs'],'-',color='k',linewidth=1)
 
-ax.plot(df_Zarate_sim2.index, df_Zarate_sim2['e_pred_01'],'-',color='k',linewidth=0.5,alpha=0.75)
-ax.plot(df_Zarate_sim2.index, df_Zarate_sim2['e_pred_99'],'-',color='k',linewidth=0.5,alpha=0.75)
-ax.fill_between(df_Zarate_sim2.index,df_Zarate_sim2['e_pred_01'], df_Zarate_sim2['e_pred_99'],alpha=0.1,label='Banda de error')
-
-# Lineas: 1 , 1.5 y 2 mts
-xmin=df_Zarate_sim2.index.min()
-xmax=df_Zarate_sim2.index.max()
-
-# En cero escala Paranacito Prefectura
-#plt.hlines(5, xmin, xmax, colors='r', linestyles='-.', label='Evacuación',linewidth=1.5)
-#plt.hlines(2.3, xmin, xmax, colors='y', linestyles='-.', label='Alerta',linewidth=1.5)
-#plt.hlines(1.1, xmin, xmax, colors='y', linestyles='-.', label='Aguas Bajas',linewidth=1.5)
-
-# fecha emision
-ahora = df_Zarate_Obs.index.max()
-plt.axvline(x=ahora,color="black", linestyle="--",linewidth=2)#,label='Fecha de emisión')
-
-bbox = dict(boxstyle="round", fc="0.7")
-arrowprops = dict(
-    arrowstyle="->",
-    connectionstyle="angle,angleA=0,angleB=90,rad=10")
-offset = 10
-
-#xycoords='figure pixels',
-xdisplay = ahora + timedelta(days=1)
-ax.annotate('Pronóstico a 4 días',
-    xy=(xdisplay, 1), xytext=(-4*offset, -offset), textcoords='offset points',
-    bbox=bbox, fontsize=18)#arrowprops=arrowprops
-
-xdisplay = ahora - timedelta(days=1.5)
-ax.annotate('Días pasados',
-    xy=(xdisplay, 1), xytext=(-8*offset, -offset), textcoords='offset points',
-    bbox=bbox, fontsize=18)
-
-ax.annotate('Fecha de emisión',
-    xy=(ahora, -0.35),fontsize=15, xytext=(ahora+timedelta(days=0.3), -0.30), arrowprops=dict(facecolor='black',shrink=0.05))
-
-ax.annotate(' Esta previsión surge de aplicar el Modelo Matemático del Delta del PHC-SLH-INA, forzado por el caudal pronosticado del río Paraná \n de acuerdo al SIyAH-INA y por el nivel del Río de la Plata en el arco San Fernando - Nueva Palmira pronosticado por el SHN-SMN. \n Es una herramienta preliminar de pronóstico para utilizar en la emergencia hídrica, que se irá ajustando en el tiempo para \n generar información más confiable.',
-            xy=(xdisplay, 0), xytext=(-480,-250), textcoords='offset points', fontsize=11)
-
-ax.set_ylim(-1,2.5)
-ax.set_xlim(xmin,xmax)
-
-plt.grid(True, which='both', color='0.75', linestyle='-.',linewidth=0.5)
-plt.tick_params(axis='both', labelsize=16)
-plt.xlabel('Fecha', size=16)
-plt.ylabel('Nivel [m] Referido al cero local', size=20)
-plt.legend(prop={'size':18},loc=2,ncol=1 )
-# plt.title('nombre')
-
-date_form = DateFormatter("%H hrs \n %d-%b")
-ax.xaxis.set_major_formatter(date_form)
-ax.xaxis.set_minor_locator(mdates.HourLocator((0,6,12,18,)))
-
-#plt.tight_layout()
-# plt.show()
-nameout = 'productos/Prono_Zarate.png'    
-plt.savefig(nameout, format='png')
-plt.close()
-
-"""# Prediccion en ATUCHA 
-
-Carga los datos desde la api de Alerta
-"""
-df_Atucha_sim = getLastProno(288,{'estacion_id': '151', 'var_id': 2})
-df_Atucha_Obs = getObs(151,df_Atucha_sim.index.min(),df_Atucha_sim.index.max())
-# df_Atucha_Obs.set_index(df_Atucha_Obs['fecha'].dt.tz_convert(None), inplace=True)
-# del df_Atucha_Obs['fecha']
+    ax.plot(df_sim.index, df_sim['Y_predic'], '-',color='b',label='Nivel Pronosticado',linewidth=3)
+    ax.plot(df_obs.index, df_obs['h_obs'],'o',color='k',label='Nivel Observado',linewidth=3)
+    ax.plot(df_obs.index, df_obs['h_obs'],'-',color='k',linewidth=1,markersize=markersize)
+
+    ax.plot(df_sim.index, df_sim['e_pred_01'],'-',color='k',linewidth=0.5,alpha=0.75)
+    ax.plot(df_sim.index, df_sim['e_pred_99'],'-',color='k',linewidth=0.5,alpha=0.75)
+    ax.fill_between(df_sim.index,df_sim['e_pred_01'], df_sim['e_pred_99'],alpha=0.1,label='Banda de error')
+
+    # Lineas: 1 , 1.5 y 2 mts
+    xmin=df_sim.index.min()
+    xmax=df_sim.index.max()
+
+    # En cero escala Paranacito Prefectura
+    #plt.hlines(5, xmin, xmax, colors='r', linestyles='-.', label='Evacuación',linewidth=1.5)
+    #plt.hlines(2.3, xmin, xmax, colors='y', linestyles='-.', label='Alerta',linewidth=1.5)
+    #plt.hlines(1.1, xmin, xmax, colors='y', linestyles='-.', label='Aguas Bajas',linewidth=1.5)
+
+    # fecha emision
+    ahora = df_obs.index.max()
+    plt.axvline(x=ahora,color="black", linestyle="--",linewidth=2)#,label='Fecha de emisión')
+
+    bbox = dict(boxstyle="round", fc="0.7")
+    arrowprops = dict(
+        arrowstyle="->",
+        connectionstyle="angle,angleA=0,angleB=90,rad=10")
+    offset = 10
+
+    #xycoords='figure pixels',
+    xdisplay = ahora + timedelta(days=1)
+    ax.annotate('Pronóstico a 4 días',
+        xy=(xdisplay, ydisplay), xytext=(text_xoffset[0]*offset, -offset), textcoords='offset points',
+        bbox=bbox, fontsize=18)#arrowprops=arrowprops
+
+    xdisplay = ahora - timedelta(days=1.5)
+    ax.annotate('Días pasados',
+        xy=(xdisplay, ydisplay), xytext=(text_xoffset[1]*offset, -offset), textcoords='offset points',
+        bbox=bbox, fontsize=18)
+
+    ax.annotate('Fecha de emisión',
+        xy=(ahora, -0.35),fontsize=15, xytext=(ahora+timedelta(days=0.3), -0.30), arrowprops=dict(facecolor='black',shrink=0.05))
+
+    ax.annotate(' Esta previsión surge de aplicar el Modelo Matemático del Delta del PHC-SLH-INA, forzado por el caudal pronosticado del río Paraná \n de acuerdo al SIyAH-INA y por el nivel del Río de la Plata en el arco San Fernando - Nueva Palmira pronosticado por el SHN-SMN. \n Es una herramienta preliminar de pronóstico para utilizar en la emergencia hídrica, que se irá ajustando en el tiempo para \n generar información más confiable.',
+                xy=(xdisplay, 0), xytext=xytext, textcoords='offset points', fontsize=11)
+
+    ax.set_ylim(ylim[0],ylim[1])
+    ax.set_xlim(xmin,xmax)
+
+    plt.grid(True, which='both', color='0.75', linestyle='-.',linewidth=0.5)
+    plt.tick_params(axis='both', labelsize=16)
+    plt.xlabel('Fecha', size=16)
+    plt.ylabel('Nivel [m] Referido al cero local', size=20)
+    plt.legend(prop={'size':18},loc=2,ncol=1 )
+    # plt.title('nombre')
+
+    date_form = DateFormatter("%H hrs \n %d-%b")
+    ax.xaxis.set_major_formatter(date_form)
+    ax.xaxis.set_minor_locator(mdates.HourLocator((0,6,12,18,)))
+
+    #plt.tight_layout()
+    # plt.show()
+    # nameout = 'productos/Prono_Zarate.png'    
+    plt.savefig(nameout, format='png')
+    plt.close()
+
+def corrigeZarate():
+    """# Carga los datos"""
+
+    ## Carga Simulados en Zarate
+    df_Zarate_sim = getLastProno(288,{'estacion_id': '5907', 'var_id': 2})
+
+    ## Carga Observados
+
+    f_inicio = df_Zarate_sim.index.min()
+    f_fin = df_Zarate_sim.index.max()
+    Estaciones = {5907:'Zarate',}
+    # Estaciones a consultar
+    idDest = 5907
+    idSerieOrigen = 29437
+    df_Zarate_Obs = getObs(idSerieOrigen,f_inicio,f_fin)
+
+    # Elimina saltos
+    df_Zarate_Obs = eliminaSaltos(df_Zarate_Obs,0.25)
+    # sns.histplot(data=df_Zarate_Obs, x="dif_F")
+    # plt.show()
+    # df_Zarate_Obs.set_index(df_Zarate_Obs['fecha'].dt.tz_convert(None), inplace=True)
+    # del df_Zarate_Obs['fecha']
+
+    ###### Correccion 1 el simulado en zarate de retrasa dos horas
+    df_Zarate_sim.index = df_Zarate_sim.index + timedelta(hours=1) # - timedelta(hours=2)
+
+    ## Union
+    df_Zarate = df_Zarate_sim.join(df_Zarate_Obs, how = 'outer')
+    df_Zarate['h_sim'] = df_Zarate['h_sim'].interpolate(method='linear',limit=4)
+    #df_Zarate['h_sim_Mavg'] = df_Zarate['h_sim'].rolling(4, min_periods=1).mean()
+
+    ##Plot
+    if False:
+        plotObsVsSim(df_Zarate)
+
+    """# Modelo RL"""
+
+    train0 = df_Zarate.copy()
+    train0['Error0'] = train0['h_sim'] - train0['h_obs']
+    train0['dif_F1'] = train0['h_sim'].diff(periods=1).abs()
+    train0['dif_F2'] = train0['h_sim'].diff(periods=2).abs()
+    train0['dif_F3'] = train0['h_sim'].diff(periods=3).abs()
 
-###### Correccion 1 el simulado en zarate de retrasa dos horas
-df_Atucha_sim.index = df_Atucha_sim.index + timedelta(hours=1)
+    train0['dif_B1'] = train0['h_sim'].diff(periods=-1).abs()
+    train0['dif_B2'] = train0['h_sim'].diff(periods=-2).abs()
+    train0['dif_B3'] = train0['h_sim'].diff(periods=-3).abs()
 
-## Union
-# df_Atucha = df_Atucha_sim.join(df_Atucha_Obs, how = 'outer')
-# df_Atucha['h_sim'] = df_Atucha['h_sim'].interpolate(method='linear',limit=4)
+    train0['dif_F'] = train0['dif_F1'].rolling(3, min_periods=1).mean()
+    train0['dif_B'] = train0['dif_B1'].rolling(3, min_periods=1).mean()
+
+    from sklearn import datasets, linear_model
+    from sklearn.metrics import mean_squared_error, r2_score
+
+    ## Modelo
+    train = train0[:].copy()
+    train = train.dropna()
 
+    var_obj = 'h_obs'
+    #var_obj = 'Error0'
+    covariav = ['h_sim','dif_F1','dif_B1','dif_F2','dif_B2','dif_F3','dif_B3']
+    covariav = ['h_sim','dif_F1','dif_B1','dif_F2','dif_B2']
+    covariav = ['h_sim','dif_F','dif_B']
+    covariav = ['h_sim',]
 
-X_input = df_Atucha_sim[['h_sim',]].values
+    lr = linear_model.LinearRegression()
+    X_train = train[covariav]
+    Y_train = train[var_obj]
+    lr.fit(X_train,Y_train)
 
-# Prediccion
-df_Atucha_sim['Y_predic'] = lr.predict(X_input)
+    # Create the test features dataset (X_test) which will be used to make the predictions.
+    X_test = train[covariav].values
+    # The labels of the model
+    Y_test = train[var_obj].values
+    Y_predictions = lr.predict(X_test)
+    train['Y_predictions'] = Y_predictions
+    #train['Y_predictions'] = train['h_sim'] - train['Y_predictions'] 
 
-horas_plot = 24*9
-df_Atucha_sim = df_Atucha_sim[-horas_plot:]
-# df_simulado['e_pred_05'] = df_simulado['Y_predic'] + quant_Err[0.05]
-# df_simulado['e_pred_95'] = df_simulado['Y_predic'] + quant_Err[0.95]
-df_Atucha_sim['e_pred_01'] = df_Atucha_sim['Y_predic'] + quant_Err[0.001]
-df_Atucha_sim['e_pred_99'] = df_Atucha_sim['Y_predic'] + quant_Err[0.999]
+    # The coefficients
+    print('Coefficients B0: \n', lr.intercept_)
+    print('Coefficients: \n', lr.coef_)
 
-# 2serie 
+    # The mean squared error
+    mse = mean_squared_error(Y_test, Y_predictions)
+    print('Mean squared error: %.5f' % mse)
+    # The coefficient of determination: 1 is perfect prediction
+    coefDet = r2_score(Y_test, Y_predictions)
+    print('r2_score: %.5f' % coefDet)
 
-series.append(prono2serie(df_Atucha_sim,main_colname="Y_predic",members={'e_pred_01':'p01','e_pred_99':'p99'},series_id=3403))
+    train['Error_pred'] =  train['Y_predictions']  - train[var_obj]
+    quant_Err = train['Error_pred'].quantile([.001,.05,.95,.999])
 
-# PLOT FINAL
-fig = plt.figure(figsize=(12, 8))
-ax = fig.add_subplot(1, 1, 1)
+    ## Plot
+    if False:
+        plotObsVsSimVsPred(df_Zarate,train)
 
-ax.plot(df_Atucha_sim.index, df_Atucha_sim['Y_predic'], '-',color='b',label='Nivel Pronosticado',linewidth=3)
+    """# Predicción  en Zarate
 
-ax.plot(df_Atucha_sim.index, df_Atucha_sim['e_pred_01'],'-',color='k',linewidth=0.5,alpha=0.75)
-ax.plot(df_Atucha_sim.index, df_Atucha_sim['e_pred_99'],'-',color='k',linewidth=0.5,alpha=0.75)
-ax.fill_between(df_Atucha_sim.index,df_Atucha_sim['e_pred_01'], df_Atucha_sim['e_pred_99'],alpha=0.1,label='Banda de error')
-ax.plot(df_Atucha_Obs.index, df_Atucha_Obs['h_obs'],'o',color='k',label='Nivel Observado',linewidth=3)
-ax.plot(df_Atucha_Obs.index, df_Atucha_Obs['h_obs'],'-',color='k',linewidth=1)
+    Predice sobre todos los datos de Zarate.  Se vuelve a calcular porque al entrenar el modelo hay datos que se eliminan por no tener un observado para comparar. Al predecir si se tiene estos datos en cuenta y se completa la serie.
+    """
 
-# Lineas: 1 , 1.5 y 2 mts
-xmin=df_Atucha_sim.index.min()
-xmax=df_Atucha_sim.index.max()
+    df_Zarate_sim2 = df_Zarate_sim.copy()
+    X_input = df_Zarate_sim2[['h_sim',]].values
 
-# En cero escala Paranacito Prefectura
-#plt.hlines(5, xmin, xmax, colors='r', linestyles='-.', label='Evacuación',linewidth=1.5)
-#plt.hlines(2.3, xmin, xmax, colors='y', linestyles='-.', label='Alerta',linewidth=1.5)
-#plt.hlines(1.1, xmin, xmax, colors='y', linestyles='-.', label='Aguas Bajas',linewidth=1.5)
+    # Prediccion
+    df_Zarate_sim2['Y_predic'] = lr.predict(X_input)
 
-# fecha emision
-ahora = df_Zarate_Obs.index.max()
-plt.axvline(x=ahora,color="black", linestyle="--",linewidth=2)#,label='Fecha de emisión')
+    horas_plot = 24*15
+    df_Zarate_sim2 = df_Zarate_sim2[-horas_plot:]
+    # df_simulado['e_pred_05'] = df_simulado['Y_predic'] + quant_Err[0.05]
+    # df_simulado['e_pred_95'] = df_simulado['Y_predic'] + quant_Err[0.95]
+    df_Zarate_sim2['e_pred_01'] = df_Zarate_sim2['Y_predic'] + quant_Err[0.001]
+    df_Zarate_sim2['e_pred_99'] = df_Zarate_sim2['Y_predic'] + quant_Err[0.999]
 
-bbox = dict(boxstyle="round", fc="0.7")
-arrowprops = dict(
-    arrowstyle="->",
-    connectionstyle="angle,angleA=0,angleB=90,rad=10")
-offset = 10
 
-#xycoords='figure pixels',
-xdisplay = ahora + timedelta(days=1)
-ax.annotate('Pronóstico a 4 días',
-    xy=(xdisplay, 3), xytext=(-4*offset, -offset), textcoords='offset points',
-    bbox=bbox, fontsize=18)#arrowprops=arrowprops
+    # SERIES 2 upload #
 
-xdisplay = ahora - timedelta(days=1.5)
-ax.annotate('Días pasados',
-    xy=(xdisplay, 3), xytext=(-8*offset, -offset), textcoords='offset points',
-    bbox=bbox, fontsize=18)
+    series = [
+        prono2serie(df_Zarate_sim2,main_colname="Y_predic",members={'e_pred_01':'p01','e_pred_99':'p99'},series_id=29534)
+    ]
 
-ax.annotate('Fecha de emisión',
-    xy=(ahora, -0.35),fontsize=15, xytext=(ahora+timedelta(days=0.3), -0.30), arrowprops=dict(facecolor='black',shrink=0.05))
+    # PLOT FINAL
+    plotFinal(df_Zarate_Obs,df_Zarate_sim2,'productos/Prono_Zarate.png',ydisplay=2,xytext=(-480,-250),ylim=(-1,2.5))
+    
+    """# Prediccion en ATUCHA 
 
-ax.annotate(' Esta previsión surge de aplicar el Modelo Matemático del Delta del PHC-SLH-INA, forzado por el caudal pronosticado del río Paraná \n de acuerdo al SIyAH-INA y por el nivel del Río de la Plata en el arco San Fernando - Nueva Palmira pronosticado por el SHN-SMN. \n Es una herramienta preliminar de pronóstico para utilizar en la emergencia hídrica, que se irá ajustando en el tiempo para \n generar información más confiable.',
-            xy=(xdisplay, 0), xytext=(-420,-120), textcoords='offset points', fontsize=11)
+    Carga los datos desde la api de Alerta
+    """
+    df_Atucha_sim = getLastProno(288,{'estacion_id': '151', 'var_id': 2})
+    df_Atucha_Obs = getObs(151,df_Atucha_sim.index.min(),df_Atucha_sim.index.max())
+    # df_Atucha_Obs.set_index(df_Atucha_Obs['fecha'].dt.tz_convert(None), inplace=True)
+    # del df_Atucha_Obs['fecha']
 
-ax.set_ylim(-0.,3.5)
-ax.set_xlim(xmin,xmax)
+    ###### Correccion 1 el simulado en zarate de retrasa dos horas
+    df_Atucha_sim.index = df_Atucha_sim.index + timedelta(hours=1)
 
-plt.grid(True, which='both', color='0.75', linestyle='-.',linewidth=0.5)
-plt.tick_params(axis='both', labelsize=16)
-plt.xlabel('Fecha', size=16)
-plt.ylabel('Nivel [m] Referido al cero local', size=20)
-plt.legend(prop={'size':18},loc=2,ncol=1 )
-# plt.title('nombre')
+    ## Union
+    # df_Atucha = df_Atucha_sim.join(df_Atucha_Obs, how = 'outer')
+    # df_Atucha['h_sim'] = df_Atucha['h_sim'].interpolate(method='linear',limit=4)
 
-date_form = DateFormatter("%H hrs \n %d-%b")
-ax.xaxis.set_major_formatter(date_form)
-ax.xaxis.set_minor_locator(mdates.HourLocator((0,6,12,18,)))
 
-#plt.tight_layout()
-# plt.show()
-nameout = 'productos/Prono_Atucha.png'    
-plt.savefig(nameout, format='png')
-plt.close()
-
-# nameout = 'Prono_Zarate.png'    
-# plt.savefig(nameout, format='jpg')# , dpi=200, facecolor='w', edgecolor='w',bbox_inches = 'tight', pad_inches = 0
+    X_input = df_Atucha_sim[['h_sim',]].values
 
-# plt.close()
+    # Prediccion
+    df_Atucha_sim['Y_predic'] = lr.predict(X_input)
 
-"""# Prediccion en CAMPANA ##############################
+    horas_plot = 24*9
+    df_Atucha_sim = df_Atucha_sim[-horas_plot:]
+    # df_simulado['e_pred_05'] = df_simulado['Y_predic'] + quant_Err[0.05]
+    # df_simulado['e_pred_95'] = df_simulado['Y_predic'] + quant_Err[0.95]
+    df_Atucha_sim['e_pred_01'] = df_Atucha_sim['Y_predic'] + quant_Err[0.001]
+    df_Atucha_sim['e_pred_99'] = df_Atucha_sim['Y_predic'] + quant_Err[0.999]
 
-Carga los datos desde la api de Alerta
-"""
-
-df_Campana_sim = getLastProno(288,{'estacion_id': '41', 'var_id': 2})
-
-###### Correccion 1 el simulado en zarate de retrasa dos horas
-df_Campana_sim.index = df_Campana_sim.index - timedelta(hours=2)
+    # 2serie 
 
-## Carga Observados
-f_inicio = df_Campana_sim.index.min()
-f_fin = df_Campana_sim.index.max()
-Estaciones = {41:'Campana',}
-idDest = 41
-idSerieOrigen = 41
-df_Campana_Obs = getObs(idSerieOrigen,f_inicio,f_fin)
+    series.append(prono2serie(df_Atucha_sim,main_colname="Y_predic",members={'e_pred_01':'p01','e_pred_99':'p99'},series_id=3403))
 
-###### Correccion 1 el simulado en Campana de retrasa dos horas
-df_Campana_sim.index = df_Campana_sim.index - timedelta(hours=2)
+    # PLOT FINAL
+    plotFinal(df_Atucha_Obs,df_Atucha_sim,'productos/Prono_Atucha.png',3,(-420,-120),(-0.,3.5))
 
-X_input = df_Campana_sim[['h_sim',]].values
+    """# Prediccion en CAMPANA ##############################
 
-# Prediccion
-df_Campana_sim['Y_predic'] = lr.predict(X_input)
+    Carga los datos desde la api de Alerta
+    """
 
-horas_plot = 24*10
-df_Campana_sim = df_Campana_sim[-horas_plot:]
-# df_simulado['e_pred_05'] = df_simulado['Y_predic'] + quant_Err[0.05]
-# df_simulado['e_pred_95'] = df_simulado['Y_predic'] + quant_Err[0.95]
-df_Campana_sim['e_pred_01'] = df_Campana_sim['Y_predic'] + quant_Err[0.001]
-df_Campana_sim['e_pred_99'] = df_Campana_sim['Y_predic'] + quant_Err[0.999]
+    df_Campana_sim = getLastProno(288,{'estacion_id': '41', 'var_id': 2})
 
+    ###### Correccion 1 el simulado en zarate de retrasa dos horas
+    df_Campana_sim.index = df_Campana_sim.index - timedelta(hours=2)
 
-series.append(prono2serie(df_Campana_sim,main_colname="Y_predic",members={'e_pred_01':'p01','e_pred_99':'p99'},series_id=3405))
+    ## Carga Observados
+    f_inicio = df_Campana_sim.index.min()
+    f_fin = df_Campana_sim.index.max()
+    Estaciones = {41:'Campana',}
+    idDest = 41
+    idSerieOrigen = 41
+    df_Campana_Obs = getObs(idSerieOrigen,f_inicio,f_fin)
 
-# PLOT FINAL
-fig = plt.figure(figsize=(12, 8))
-ax = fig.add_subplot(1, 1, 1)
+    ###### Correccion 1 el simulado en Campana de retrasa dos horas
+    df_Campana_sim.index = df_Campana_sim.index - timedelta(hours=2)
 
-ax.plot(df_Campana_sim.index, df_Campana_sim['Y_predic'], '-',color='b',label='Nivel Pronosticado',linewidth=3)
-#ax.plot(df_Campana_sim.index, df_Campana_sim['h_sim'], '-',color='b',label='Nivel Pronosticado',linewidth=3)
-ax.plot(df_Campana_Obs.index, df_Campana_Obs['h_obs'],'o',markersize=10,color='k',label='Nivel Observado',linewidth=3)
-#ax.plot(df_Campana_Obs.index, df_Campana_Obs['h_obs'],'-',color='k',linewidth=1)
+    X_input = df_Campana_sim[['h_sim',]].values
 
-ax.plot(df_Campana_sim.index, df_Campana_sim['e_pred_01'],'-',color='k',linewidth=0.5,alpha=0.75)
-ax.plot(df_Campana_sim.index, df_Campana_sim['e_pred_99'],'-',color='k',linewidth=0.5,alpha=0.75)
-ax.fill_between(df_Campana_sim.index,df_Campana_sim['e_pred_01'], df_Campana_sim['e_pred_99'],alpha=0.1,label='Banda de error')
+    # Prediccion
+    df_Campana_sim['Y_predic'] = lr.predict(X_input)
 
-# Lineas: 1 , 1.5 y 2 mts
-xmin=df_Campana_sim.index.min()
-xmax=df_Campana_sim.index.max()
+    horas_plot = 24*10
+    df_Campana_sim = df_Campana_sim[-horas_plot:]
+    # df_simulado['e_pred_05'] = df_simulado['Y_predic'] + quant_Err[0.05]
+    # df_simulado['e_pred_95'] = df_simulado['Y_predic'] + quant_Err[0.95]
+    df_Campana_sim['e_pred_01'] = df_Campana_sim['Y_predic'] + quant_Err[0.001]
+    df_Campana_sim['e_pred_99'] = df_Campana_sim['Y_predic'] + quant_Err[0.999]
 
-# En cero escala Paranacito Prefectura
-#plt.hlines(5, xmin, xmax, colors='r', linestyles='-.', label='Evacuación',linewidth=1.5)
-#plt.hlines(2.3, xmin, xmax, colors='y', linestyles='-.', label='Alerta',linewidth=1.5)
-#plt.hlines(1.1, xmin, xmax, colors='y', linestyles='-.', label='Aguas Bajas',linewidth=1.5)
 
-# fecha emision
-ahora = df_Zarate_Obs.index.max()
-plt.axvline(x=ahora,color="black", linestyle="--",linewidth=2)#,label='Fecha de emisión')
+    series.append(prono2serie(df_Campana_sim,main_colname="Y_predic",members={'e_pred_01':'p01','e_pred_99':'p99'},series_id=3405))
 
-bbox = dict(boxstyle="round", fc="0.7")
-arrowprops = dict(
-    arrowstyle="->",
-    connectionstyle="angle,angleA=0,angleB=90,rad=10")
-offset = 10
+    # PLOT FINAL
+    plotFinal(df_Campana_Obs,df_Campana_sim,'productos/Prono_Campana.png',markersize=10,ydisplay=3.4,text_xoffset=(-2,-5),xytext=(-380,-250),ylim=(-1.,3.5))
+    # nameout = 'Prono_Zarate.png'    
+    # plt.savefig(nameout, format='jpg')# , dpi=200, facecolor='w', edgecolor='w',bbox_inches = 'tight', pad_inches = 0
 
-#xycoords='figure pixels',
-xdisplay = ahora + timedelta(days=1)
-ax.annotate('Pronóstico a 4 días',
-    xy=(xdisplay, 3.4), xytext=(-2*offset, -offset), textcoords='offset points',
-    bbox=bbox, fontsize=18)#arrowprops=arrowprops
+    # plt.close()
 
-xdisplay = ahora - timedelta(days=1.5)
-ax.annotate('Días pasados',
-    xy=(xdisplay, 3.4), xytext=(-5*offset, -offset), textcoords='offset points',
-    bbox=bbox, fontsize=18)
+    """# Prediccion en ESCOBAR ###############################################
 
-ax.annotate('Fecha de emisión',
-    xy=(ahora, -0.35),fontsize=15, xytext=(ahora+timedelta(days=0.3), -0.30), arrowprops=dict(facecolor='black',shrink=0.05))
+    Carga los datos desde la api de Alerta
+    """
+    df_Escobar_sim = getLastProno(288,{'estacion_id': '42', 'var_id': 2})
 
-ax.annotate(' Esta previsión surge de aplicar el Modelo Matemático del Delta del PHC-SLH-INA, forzado por el caudal pronosticado del río Paraná \n de acuerdo al SIyAH-INA y por el nivel del Río de la Plata en el arco San Fernando - Nueva Palmira pronosticado por el SHN-SMN. \n Es una herramienta preliminar de pronóstico para utilizar en la emergencia hídrica, que se irá ajustando en el tiempo para \n generar información más confiable.',
-            xy=(xdisplay, 0), xytext=(-380,-250), textcoords='offset points', fontsize=11)
+    ###### Correccion 1 el simulado en zarate de retrasa dos horas
+    df_Escobar_sim.index = df_Escobar_sim.index - timedelta(hours=2)
 
-ax.set_ylim(-1.,3.5)
-ax.set_xlim(xmin,xmax)
+    ## Carga Observados
+    f_inicio = df_Escobar_sim.index.min()
+    f_fin = df_Escobar_sim.index.max()
+    Estaciones = {42:'Escobar',}
+    idDest = 42
+    seriesIdOrigen = 42
+    df_Escobar_Obs = getObs(seriesIdOrigen,f_inicio,f_fin)
 
-plt.grid(True, which='both', color='0.75', linestyle='-.',linewidth=0.5)
-plt.tick_params(axis='both', labelsize=16)
-plt.xlabel('Fecha', size=16)
-plt.ylabel('Nivel [m] Referido al cero local', size=20)
-plt.legend(prop={'size':18},loc=2,ncol=1 )
-# plt.title('nombre')
+    ###### Correccion 1 el simulado en Escobar de retrasa dos horas
+    df_Escobar_sim.index = df_Escobar_sim.index - timedelta(hours=2)
 
-date_form = DateFormatter("%H hrs \n %d-%b")
-ax.xaxis.set_major_formatter(date_form)
-ax.xaxis.set_minor_locator(mdates.HourLocator((0,6,12,18,)))
+    X_input = df_Escobar_sim[['h_sim',]].values
 
-#plt.tight_layout()
-# plt.show()
-nameout = 'productos/Prono_Campana.png'    
-plt.savefig(nameout, format='png')
-plt.close()
+    # Prediccion
+    df_Escobar_sim['Y_predic'] = lr.predict(X_input)
 
-# nameout = 'Prono_Zarate.png'    
-# plt.savefig(nameout, format='jpg')# , dpi=200, facecolor='w', edgecolor='w',bbox_inches = 'tight', pad_inches = 0
+    horas_plot = 24*10
+    df_Escobar_sim = df_Escobar_sim[-horas_plot:]
+    # df_simulado['e_pred_05'] = df_simulado['Y_predic'] + quant_Err[0.05]
+    # df_simulado['e_pred_95'] = df_simulado['Y_predic'] + quant_Err[0.95]
+    df_Escobar_sim['e_pred_01'] = df_Escobar_sim['Y_predic'] + quant_Err[0.001]
+    df_Escobar_sim['e_pred_99'] = df_Escobar_sim['Y_predic'] + quant_Err[0.999]
 
-# plt.close()
 
-"""# Prediccion en ESCOBAR ###############################################
+    # 2series
 
-Carga los datos desde la api de Alerta
-"""
-df_Escobar_sim = getLastProno(288,{'estacion_id': '42', 'var_id': 2})
-
-###### Correccion 1 el simulado en zarate de retrasa dos horas
-df_Escobar_sim.index = df_Escobar_sim.index - timedelta(hours=2)
-
-## Carga Observados
-f_inicio = df_Escobar_sim.index.min()
-f_fin = df_Escobar_sim.index.max()
-Estaciones = {42:'Escobar',}
-idDest = 42
-seriesIdOrigen = 42
-df_Escobar_Obs = getObs(seriesIdOrigen,f_inicio,f_fin)
+    series.append(prono2serie(df_Escobar_sim,main_colname="Y_predic",members={'e_pred_01':'p01','e_pred_99':'p99'},series_id=3398))
 
-###### Correccion 1 el simulado en Escobar de retrasa dos horas
-df_Escobar_sim.index = df_Escobar_sim.index - timedelta(hours=2)
+    # PLOT FINAL
+    plotFinal(df_Escobar_Obs,df_Escobar_sim,'productos/Prono_Escobar.png',markersize=10,ydisplay=3.4,text_xoffset=(-2,-5),xytext=(-380,-250),ylim=(-1.,3.5))
+    
+    # nameout = 'Prono_Zarate.png'    
+    # plt.savefig(nameout, format='jpg')# , dpi=200, facecolor='w', edgecolor='w',bbox_inches = 'tight', pad_inches = 0
 
-X_input = df_Escobar_sim[['h_sim',]].values
+    # plt.close()
 
-# Prediccion
-df_Escobar_sim['Y_predic'] = lr.predict(X_input)
+    ## UPLOAD PRONOSTICO
+    # uploadPronoSeries(series,cal_id=440,forecast_date=ahora,outputfile="productos/prono.json",responseOutputFile="productos/pronoresponse.json")
 
-horas_plot = 24*10
-df_Escobar_sim = df_Escobar_sim[-horas_plot:]
-# df_simulado['e_pred_05'] = df_simulado['Y_predic'] + quant_Err[0.05]
-# df_simulado['e_pred_95'] = df_simulado['Y_predic'] + quant_Err[0.95]
-df_Escobar_sim['e_pred_01'] = df_Escobar_sim['Y_predic'] + quant_Err[0.001]
-df_Escobar_sim['e_pred_99'] = df_Escobar_sim['Y_predic'] + quant_Err[0.999]
 
+### RUN ###
 
-# 2series
-
-series.append(prono2serie(df_Escobar_sim,main_colname="Y_predic",members={'e_pred_01':'p01','e_pred_99':'p99'},series_id=3398))
-
-# PLOT FINAL
-fig = plt.figure(figsize=(12, 8))
-ax = fig.add_subplot(1, 1, 1)
-
-ax.plot(df_Escobar_sim.index, df_Escobar_sim['Y_predic'], '-',color='b',label='Nivel Pronosticado',linewidth=3)
-#ax.plot(df_Escobar_sim.index, df_Escobar_sim['h_sim'], '-',color='b',label='Nivel Pronosticado',linewidth=3)
-ax.plot(df_Escobar_Obs.index, df_Escobar_Obs['h_obs'],'o',markersize=10,color='k',label='Nivel Observado',linewidth=3)
-#ax.plot(df_Escobar_Obs.index, df_Escobar_Obs['h_obs'],'-',color='k',linewidth=1)
-
-ax.plot(df_Escobar_sim.index, df_Escobar_sim['e_pred_01'],'-',color='k',linewidth=0.5,alpha=0.75)
-ax.plot(df_Escobar_sim.index, df_Escobar_sim['e_pred_99'],'-',color='k',linewidth=0.5,alpha=0.75)
-ax.fill_between(df_Escobar_sim.index,df_Escobar_sim['e_pred_01'], df_Escobar_sim['e_pred_99'],alpha=0.1,label='Banda de error')
-
-# Lineas: 1 , 1.5 y 2 mts
-xmin=df_Escobar_sim.index.min()
-xmax=df_Escobar_sim.index.max()
-
-# En cero escala Paranacito Prefectura
-#plt.hlines(5, xmin, xmax, colors='r', linestyles='-.', label='Evacuación',linewidth=1.5)
-#plt.hlines(2.3, xmin, xmax, colors='y', linestyles='-.', label='Alerta',linewidth=1.5)
-#plt.hlines(1.1, xmin, xmax, colors='y', linestyles='-.', label='Aguas Bajas',linewidth=1.5)
-
-# fecha emision
-ahora = df_Zarate_Obs.index.max()
-plt.axvline(x=ahora,color="black", linestyle="--",linewidth=2)#,label='Fecha de emisión')
-
-bbox = dict(boxstyle="round", fc="0.7")
-arrowprops = dict(
-    arrowstyle="->",
-    connectionstyle="angle,angleA=0,angleB=90,rad=10")
-offset = 10
-
-#xycoords='figure pixels',
-xdisplay = ahora + timedelta(days=1)
-ax.annotate('Pronóstico a 4 días',
-    xy=(xdisplay, 3.4), xytext=(-2*offset, -offset), textcoords='offset points',
-    bbox=bbox, fontsize=18)#arrowprops=arrowprops
-
-xdisplay = ahora - timedelta(days=1.5)
-ax.annotate('Días pasados',
-    xy=(xdisplay, 3.4), xytext=(-5*offset, -offset), textcoords='offset points',
-    bbox=bbox, fontsize=18)
-
-ax.annotate('Fecha de emisión',
-    xy=(ahora, -0.35),fontsize=15, xytext=(ahora+timedelta(days=0.3), -0.30), arrowprops=dict(facecolor='black',shrink=0.05))
-
-ax.annotate(' Esta previsión surge de aplicar el Modelo Matemático del Delta del PHC-SLH-INA, forzado por el caudal pronosticado del río Paraná \n de acuerdo al SIyAH-INA y por el nivel del Río de la Plata en el arco San Fernando - Nueva Palmira pronosticado por el SHN-SMN. \n Es una herramienta preliminar de pronóstico para utilizar en la emergencia hídrica, que se irá ajustando en el tiempo para \n generar información más confiable.',
-            xy=(xdisplay, 0), xytext=(-380,-250), textcoords='offset points', fontsize=11)
-
-ax.set_ylim(-1.,3.5)
-ax.set_xlim(xmin,xmax)
-
-plt.grid(True, which='both', color='0.75', linestyle='-.',linewidth=0.5)
-plt.tick_params(axis='both', labelsize=16)
-plt.xlabel('Fecha', size=16)
-plt.ylabel('Nivel [m] Referido al cero local', size=20)
-plt.legend(prop={'size':18},loc=2,ncol=1 )
-# plt.title('nombre')
-
-date_form = DateFormatter("%H hrs \n %d-%b")
-ax.xaxis.set_major_formatter(date_form)
-ax.xaxis.set_minor_locator(mdates.HourLocator((0,6,12,18,)))
-
-#plt.tight_layout()
-# plt.show()
-nameout = 'productos/Prono_Escobar.png'    
-plt.savefig(nameout, format='png')
-plt.close()
-
-# nameout = 'Prono_Zarate.png'    
-# plt.savefig(nameout, format='jpg')# , dpi=200, facecolor='w', edgecolor='w',bbox_inches = 'tight', pad_inches = 0
-
-# plt.close()
-
-## UPLOAD PRONOSTICO
-uploadPronoSeries(series,cal_id=440,forecast_date=ahora,outputfile="productos/prono.json",responseOutputFile="productos/pronoresponse.json")
-
-
+corrigeZarate()
